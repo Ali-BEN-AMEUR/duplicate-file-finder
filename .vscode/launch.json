@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Duplicate File Finder: test_data/",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/main.py",
+            "console": "integratedTerminal",
+            "args": ["test_data/"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Duplicate File Finder: test_data/ with HTML",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/main.py",
+            "console": "integratedTerminal",
+            "args": ["--html", "rapport.html", "test_data/"],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

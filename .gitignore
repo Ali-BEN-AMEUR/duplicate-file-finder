@@ -1,0 +1,6 @@
+.venv/
+.tmp/
+__pycache__/
+test_data/
+.DS_Store
+output.txt

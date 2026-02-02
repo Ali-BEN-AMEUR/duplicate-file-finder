@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duplicate File Finder Report</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+
+        h3 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 1.05em;
+        }
+
+        .timestamp {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+
+        section {
+            margin-bottom: 40px;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .summary-table thead {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .summary-table th,
+        .summary-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .summary-table tbody tr:hover {
+            background-color: #ecf0f1;
+        }
+
+        .summary-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .total {
+            font-size: 1.1em;
+            color: #2c3e50;
+            margin-top: 15px;
+        }
+
+        .duplicate-group {
+            border-left: 4px solid #e74c3c;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background-color: #fafafa;
+            border-radius: 4px;
+        }
+
+        .duplicate-group:hover {
+            background-color: #f0f0f0;
+        }
+
+        .file-list {
+            list-style: none;
+            margin-top: 10px;
+            margin-left: 20px;
+        }
+
+        .file-list li {
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            /* font-size: 1.2em; */
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            min-height: 36px;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .delete-btn:active {
+            transform: scale(0.95);
+        }
+
+        .delete-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .file-list a {
+            color: #2980b9;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.8em;
+        }
+
+        .file-list a:hover {
+            color: #3498db;
+            text-decoration: underline;
+        }
+
+        .no-duplicates {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #28a745;
+        }
+
+        {CSS_STYLES}
+    </style>
+    <script>
+        function deleteFile(filePath, deleteUrl) {
+            const confirmDelete = confirm(`Are you sure you want to delete:\n${filePath}?`);
+
+            if (confirmDelete) {
+                // Find the button and disable it
+                const buttons = document.querySelectorAll('.delete-btn');
+                const button = Array.from(buttons).find(btn => 
+                    btn.onclick.toString().includes(filePath)
+                );
+
+                if (button) {
+                    button.disabled = true;
+                    button.style.opacity = '0.5';
+                    button.style.cursor = 'not-allowed';
+                }
+
+                // Send DELETE request
+                fetch(deleteUrl, {
+                    method: 'DELETE',
+                    mode: 'cors'
+                })
+                .then(response => {
+                    // Store the status code before checking ok
+                    const statusCode = response.status;
+                    const statusText = response.statusText;
+
+                    // Check HTTP status code
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            const error = new Error(data.message || `HTTP ${statusCode}: ${statusText}`);
+                            error.status = statusCode;
+                            error.statusText = statusText;
+                            throw error;
+                        }).catch(jsonError => {
+                            // If JSON parsing fails, throw a generic error with status
+                            const error = new Error(`HTTP ${statusCode}: ${statusText}`);
+                            error.status = statusCode;
+                            error.statusText = statusText;
+                            throw error;
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Success: status 200
+                    if (data.status === 'success') {
+                        if (data.message.includes('File moved to trash')) {
+                            alert(`✓ File Successfully moved to Trash\n\nFile Path:\n${filePath}`);
+                        } else {
+                            alert(`✓ File Successfully Deleted\n\nFile Path:\n${filePath}`);
+                        }
+                    } else {
+                        // Unexpected status
+                        alert(`✗ Unexpected Response\n\nFile Path:\n${filePath}\n\nResponse: ${data.message}`);
+                        // Re-enable button if unexpected response
+                        if (button) {
+                            button.disabled = false;
+                            button.style.opacity = '1';
+                            button.style.cursor = 'pointer';
+                        }
+                    }
+                })
+                .catch(error => {
+                    // Error handling with proper status code
+                    const statusCode = error.status || 'Network Error';
+                    const statusText = error.statusText || 'Unknown';
+                    let errorMessage = error.message;
+
+                    // Parse specific error types by status code
+                    switch(statusCode) {
+                        case 404:
+                            errorMessage = 'File not found on server';
+                            break;
+                        case 403:
+                            errorMessage = 'Permission denied - cannot delete file';
+                            break;
+                        case 400:
+                            errorMessage = 'Bad request - invalid file path';
+                            break;
+                        case 500:
+                            errorMessage = 'Server error - failed to delete file';
+                            break;
+                        case 'Network Error':
+                            errorMessage = 'Network error - cannot reach server';
+                            break;
+                        default:
+                            // Keep the error message from the response if available
+                            break;
+                    }
+
+                    alert(`✗ Error Deleting File\n\nFile Path:\n${filePath}\n\nStatus: ${statusCode}\nError: ${errorMessage}`);
+
+                    // Re-enable the button if there's an error
+                    // if (button) {
+                    //     button.disabled = false;
+                    //     button.style.opacity = '1';
+                    //     button.style.cursor = 'pointer';
+                    // }
+                });
+            }
+        }
+
+        {JAVASCRIPT_CODE}
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Duplicate File Finder Report</h1>
+        <p class="timestamp">Generated on {TIMESTAMP}</p>
+
+        <section class="summary">
+            <h2>Scan Summary</h2>
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Directory</th>
+                        <th>Files Processed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {SUMMARY_ROWS}
+                </tbody>
+            </table>
+            <p class="total"><strong>Total files processed: {TOTAL_FILES}</strong></p>
+        </section>
+
+        <section class="duplicates">
+            <h2>Duplicates Found ({DUPLICATE_GROUPS} groups, {DUPLICATE_FILES} duplicate files)</h2>
+            {DUPLICATES_CONTENT}
+        </section>
+    </div>
+</body>
+</html>

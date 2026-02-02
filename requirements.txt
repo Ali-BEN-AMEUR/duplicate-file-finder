@@ -1,0 +1,2 @@
+# This project uses Python standard library modules only
+# Standard library modules don't need to be installed
